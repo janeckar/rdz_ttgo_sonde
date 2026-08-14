@@ -92,7 +92,14 @@ public:
         void drawString(uint16_t x, uint16_t y, const char *s, int16_t width=WIDTH_AUTO, uint16_t fg=0xffff, uint16_t bg=0);
         void drawTile(uint16_t x, uint16_t y, uint8_t cnt, uint8_t *tile_ptr);
 	void drawTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, uint16_t color, bool fill);
-        void drawBitmap(uint16_t x1, uint16_t y1, const uint16_t* bitmap, int16_t w, int16_t h);
+	/**
+	 * @param x1 coordinate in tiles
+	 * @param y1 coordinate in tiles
+	 * @param bitmap pointer to a bitmap in 16bit RGB565 format
+	 * @param w width of the bitmap in pixels
+	 * @param h height of the bitmap in pixels
+	 */
+    void drawBitmap(uint16_t x1, uint16_t y1, const uint16_t* bitmap, int16_t w, int16_t h);
 	void welcome();
 	void drawIP(uint16_t x, uint16_t y, int16_t width=WIDTH_AUTO, uint16_t fg=0xffff, uint16_t bg=0);
         void drawQS(uint16_t x, uint16_t y, uint8_t len, uint8_t size, uint8_t *stat, uint16_t fg=0xffff, uint16_t bg=0);

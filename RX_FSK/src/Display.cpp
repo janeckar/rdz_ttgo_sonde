@@ -332,7 +332,59 @@ void U8x8Display::drawTile(uint16_t x, uint16_t y, uint8_t cnt, uint8_t *tile_pt
 	u8x8->drawTile(x, y, cnt, tile_ptr);
 }
 
+#define roundto8(x) ((x+7) & ~7)
+
+
 void U8x8Display::drawBitmap(uint16_t x1, uint16_t y1, const uint16_t* bitmap, int16_t w, int16_t h) {
+	// because we use u8x8 library, we need to draw the bitmap in tiles of 8 pixels, when drawing another elements we need to draw them outside of the tiles of bitmap
+	// uint16_t tx_s = x1/8; // tile x position
+	// uint16_t px_s = x1%8; // pixel x position within tile
+	// uint16_t ty_s = y1/8; // tile y position
+	// uint16_t py_s = y1%8; // pixel y position within tile
+	uint16_t tx_s = x1; // tile x position
+	uint16_t ty_s = y1; // tile y position
+	// calculate number of pixels needed for the bitmap, round up to next multiple of 8
+	uint16_t rounded8_w = roundto8(w);
+	uint16_t tiles_h = roundto8(h)/8;
+	uint16_t tiles_w = roundto8(w)/8;
+	uint8_t *tiles_buffer = (uint8_t *)malloc(sizeof(uint8_t) * rounded8_w);
+	memset(tiles_buffer, 0, sizeof(uint8_t) * rounded8_w); // clear buffer
+	// drawing is done by rows and bit shifting the bits to more significant bits
+	for(uint16_t ty = 0; ty < tiles_h; ty++){
+		for(uint16_t py = 0; py < 8; py++){
+			if(h <= ty*8 + py){
+				for(uint16_t px = 0; px < w; px++){ // in xes just shift bits to left according to the pixel positions
+					tiles_buffer[px] >>= (8 - py);
+				}
+				break;
+			}
+			for(uint16_t px = 0; px < w; px++){
+				tiles_buffer[px] >>= 1; // implicitly clears buffer
+				tiles_buffer[px] += bitmap[ty*w*8 + py*w + px] ? 0x80 : 0;
+			}
+
+		}
+		u8x8->drawTile(tx_s, ty_s + ty, tiles_w, tiles_buffer);
+	}
+	free(tiles_buffer);
+
+	#if 0 // original code which almoset worked for pixels
+	for(int py=py_s; py<8; py++) {
+		for(int px=0; px<w; px++){
+			tiles_buffer[px+px_s] <<= 1;
+			tiles_buffer[px+px_s] += bitmap[ty*w*8 + py*w + px] ? 1 : 0;
+		}
+	}
+
+	for(ty = 1; ty<tiles_h; ty++){
+		for(int py=0; py<8; py++) {
+			for(int px=0; px<w; px++){
+				tiles_buffer[px+px_s] <<= 1;
+				tiles_buffer[px+px_s] += bitmap[ty*w*8 + py*w + px] ? 1 : 0; // what if the bitmap is shorter than the specified height
+			}
+		}
+	}
+	#endif
 	// not supported
 }
 void U8x8Display::drawTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, uint16_t color, bool fill) {

@@ -18,6 +18,7 @@
 #include <Arduino_GFX_Library.h>
 #include <U8x8lib.h>
 #include <LittleFS.h>
+#include <vector>
 
 #include "posinfo.h"
 
@@ -56,6 +57,17 @@ struct CircleInfo {  // 3,5=g0NCS,50,ff0000,000033,5,ffff00,4,ffffff
 	uint16_t bcol;
 	uint8_t awidth;
 	uint16_t acol;
+};
+
+struct Vec2 {
+	int16_t x;
+	int16_t y;
+};
+
+struct Bitmap {
+	uint16_t *data;
+	uint32_t w;
+	uint32_t h;
 };
 
 // Now starting towards supporting different Display types / libraries
@@ -139,6 +151,9 @@ private:
 	int fontsma=0, fontlar=1;
 	uint16_t colfg, colbg;
 	static void circ(uint16_t *bm, int16_t w, int16_t x0, int16_t y0, int16_t r, uint16_t fg, boolean fill, uint16_t bg);
+	static void line(Bitmap bm, Vec2 v0, Vec2 v1, uint16_t fg);
+	static void line_get_X_boundaries(Bitmap bm, std::vector<int16_t> & buffer, Vec2 v0, Vec2 v1, uint16_t fg);
+	static void triangle(Bitmap bm, Vec2 v0, Vec2 v1, Vec2 v2, uint16_t fg, boolean fill);
 	static int countEntries(File f);
 	void calcGPS();
 	int gpsDist; // -1: invalid

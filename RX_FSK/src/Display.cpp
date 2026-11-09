@@ -648,7 +648,7 @@ void ILI9225Display::drawString(uint16_t x, uint16_t y, const char *s, int16_t w
 	char buf[50];
 	utf2latin15(s, buf, 50);	
 
-	if(width<0) {
+	if(width<0) {// Calculates number of tiles needed to redraw the bitmap, round up to next multiple of 8// Calculates number of tiles needed to redraw the bitmap, round up to next multiple of 8// Calculates number of tiles needed to redraw the bitmap, round up to next multiple of 8// Calculates number of tiles needed to redraw the bitmap, round up to next multiple of 8
 		width = -width;
 		alignright = true;
 	}
@@ -1277,6 +1277,162 @@ void Display::circ(uint16_t *bm, int16_t size, int16_t x0, int16_t y0, int16_t r
 	}
 }
 
+// void Display::line_one_octant(Bitmap bm, Vec2 v0, Vec2 v1, uint16_t fg){
+// 	int32_t dx = v1.x - v0.x;
+// 	int32_t dy = v1.y - v0.y;
+// 	int32_t p = 2*dy - dx;
+// 	int32_t y = v0.y; // podminka x0<x1 & y0<y1
+
+// 	for(int x = v0.x; x <= v1.x; x++){
+// 		bm.data[bm.w * y + x] = fg;
+// 		p += 2 * dy;
+// 		if(p >= 0){
+// 			p -= 2*dx;
+// 			y++;
+// 		}
+// 	}
+// }
+
+// void Display::line(Bitmap bm, Vec2 v0, Vec2 v1, uint16_t fg){
+	
+	
+// 	// 1 and 3 quadrant
+// 	if(v0.x >= v1.x){
+// 		std::swap(v0, v1);
+// 	}
+	
+// 	int32_t dx = abs(v1.x - v0.x);
+// 	int32_t dy = abs(v1.y - v0.y);
+// 	int32_t y_inc = v1.y - v0.y >= 0 ? 1 : -1; 
+// 	// second octant
+// 	if(dy > dx){
+// 		std::swap(v0.x, v0.y);
+// 		std::swap(v1.x, v1.y);
+// 		std::swap(dx, dy);
+// 		int32_t p = 2*dy - dx;
+// 		int32_t y = v0.y;
+// 		for(int x = v0.x; x <= v1.x; x++){
+// 			bm.data[bm.w * x + y] = fg;
+// 			p += 2 * dy;
+// 			if(p >= 0){
+// 				p -= 2*dx;
+// 				y += y_inc;
+// 			}
+// 		}
+// 	} else{
+
+// 		int32_t p = 2*dy - dx;
+// 		int32_t y = v0.y; // podminka x0<x1 & y0<y1
+
+// 		for(int x = v0.x; x <= v1.x; x++){
+// 			bm.data[bm.w * y + x] = fg;
+// 			p += 2 * dy;
+// 			if(p >= 0){
+// 				p -= 2*dx;
+// 				y += y_inc;
+// 			}
+// 		}
+// 	}
+// }
+
+/**
+ * Bresenham Curve Rasterizing Algorithms
+ * @author alois zingl
+ * @version V20.15 april 2020
+ * @copyright MIT open-source license software
+ * @url https://github.com/zingl/Bresenham
+ * @author  Zingl Alois
+*/
+
+void Display::line(Bitmap bm, Vec2 v0, Vec2 v1, uint16_t fg)
+{
+	int32_t x0 = v0.x;
+	int32_t x1 = v1.x;
+	int32_t y0 = v0.y;
+	int32_t y1 = v1.y;
+    int dx =  abs(x1-x0), sx = x0<x1 ? 1 : -1;
+    int dy = -abs(y1-y0), sy = y0<y1 ? 1 : -1;
+    int err = dx+dy, e2;                                  /* error value e_xy */
+
+    for (;;) {                                                        /* loop */
+        bm.data[y0 * bm.w + x0] = fg;
+        e2 = 2*err;
+        if (e2 >= dy) {                                       /* e_xy+e_x > 0 */
+            if (x0 == x1) break;
+            err += dy; x0 += sx;
+        }
+        if (e2 <= dx) {                                       /* e_xy+e_y < 0 */
+            if (y0 == y1) break;
+            err += dx; y0 += sy;
+        }
+    }
+}
+
+void Display::line_get_X_boundaries(Bitmap bm, std::vector<int16_t> & buffer, Vec2 v0, Vec2 v1, uint16_t fg){
+	int32_t x0 = v0.x;
+	int32_t x1 = v1.x;
+	int32_t y0 = v0.y;
+	int32_t y1 = v1.y;
+    int dx =  abs(x1-x0), sx = x0<x1 ? 1 : -1;
+    int dy = -abs(y1-y0), sy = y0<y1 ? 1 : -1;
+    int err = dx+dy, e2;                                  /* error value e_xy */
+
+	if(buffer.size() == 0){
+		buffer.push_back(x0);
+	}
+
+    for (;;) {   
+		bm.data[y0 * bm.w + x0] = fg;                                 /* loop */
+        e2 = 2*err;
+        if (e2 >= dy) {                                       /* e_xy+e_x > 0 */
+            if (x0 == x1) break;
+            err += dy; x0 += sx;
+        }
+        if (e2 <= dx) {                                       /* e_xy+e_y < 0 */
+            if (y0 == y1) break;
+            err += dx; y0 += sy;
+			buffer.push_back(x0);
+        }
+    }
+}
+
+void Display::triangle(Bitmap bm, Vec2 v0, Vec2 v1, Vec2 v2, uint16_t fg, boolean fill){
+	if(!fill){
+		line(bm, v0, v1, fg);
+		line(bm, v1, v2, fg);
+		line(bm, v2, v0, fg);
+		return;
+	}
+	
+	if(v0.y > v1.y) std::swap(v0, v1);
+	if(v1.y > v2.y) std::swap(v1, v2);
+	if(v0.y > v1.y) std::swap(v0, v1);
+	int16_t maxY = v2.y;
+	int16_t minY = v0.y;
+	std::vector<int16_t> leftX;
+	std::vector<int16_t> rightX;
+	leftX.reserve(maxY - minY);
+	rightX.reserve(maxY - minY);
+
+	int32_t CP = (v1.x-v0.x)*(v2.y-v0.y) - (v1.y-v0.y)*(v2.x-v0.x);
+	if(CP < 0){
+		line_get_X_boundaries(bm, leftX, v0, v1, fg);
+		line_get_X_boundaries(bm, leftX, v1, v2, fg);
+		line_get_X_boundaries(bm, rightX, v0, v2, fg);
+	} else if(CP == 0){
+		return;
+	} else{
+		line_get_X_boundaries(bm, leftX, v0, v2, fg);
+		line_get_X_boundaries(bm, rightX, v0, v1, fg);
+		line_get_X_boundaries(bm, rightX, v1, v2, fg);
+	}
+
+	for(int y = minY; y <= maxY; y++){
+		for(int x = leftX[y-minY]; x <= rightX[y-minY]; x++){
+			bm.data[y*bm.w + x] = fg;
+		}
+	}
+}
 
 void Display::setLayout(int newidx) {
 	LOG_D(TAG, "setLayout: %d (max is %d)\n", newidx, nLayouts);
@@ -1707,9 +1863,11 @@ void Display::drawGPS(DispEntry *de) {
 				bool rxgood = (sonde.si()->rxStat[0]==0);
 				int angN, angA, angB;   // angle of north, array, bullet
 				int validA, validB;     // 0: no, 1: yes, -1: old
-				if(circinfo->arr=='C') {  angA=gpsPos.course; validA=disp.gpsCourseOld?-1:1; }
+				// if(circinfo->arr=='C') {  angA=gpsPos.course; validA=disp.gpsCourseOld?-1:1; } // not correct if no gps yet
+				if(circinfo->arr=='C') {  angA=gpsPos.course; validA=gpsPos.valid?1:-1; }
 				else { angA=disp.gpsDir; validA=sonde.si()->d.validPos?(rxgood?1:-1):0; }
-				if(circinfo->bul=='C') {  angB=gpsPos.course; validB=disp.gpsCourseOld?-1:1; }
+				// if(circinfo->bul=='C') {  angB=gpsPos.course; validB=disp.gpsCourseOld?-1:1; }
+				if(circinfo->bul=='C') {  angB=gpsPos.course; validB=gpsPos.valid?1:-1; }
 				else { angB=disp.gpsDir; validB=sonde.si()->d.validPos?(rxgood?1:-1):0; }
 				if(circinfo->top=='N') {
 					angN = 0;
@@ -1732,22 +1890,30 @@ void Display::drawGPS(DispEntry *de) {
 					circ(bitmap, size, x0+circinfo->radius*sin(angB*PI/180), y0-circinfo->radius*cos(angB*PI/180), circinfo->brad,
 							circinfo->bcol, true, validB==1?circinfo->bcol:0);
 				}
-				rdis->drawBitmap(de->x, de->y, bitmap, size, size);
+				Bitmap bm = {bitmap, size, size};
 				// triangle in direction angA
 				uint16_t xa,ya,xb,yb,xc,yc;
 				float xf=sin(angA*PI/180);
 				float yf=cos(angA*PI/180);
-				xa = de->x + x0 + xf*circinfo->radius;
-				ya = de->y + y0 - yf*circinfo->radius;
-				xb = de->x + x0 + yf*circinfo->awidth;
-				yb = de->y + y0 + xf*circinfo->awidth;
-				xc = de->x + x0 - yf*circinfo->awidth;
-				yc = de->y + y0 - xf*circinfo->awidth;
+				Vec2 va,vb,vc;
+				va.x = de->x + x0 + xf*circinfo->radius;
+				va.y = de->y + y0 - yf*circinfo->radius;
+				vb.x = de->x + x0 + yf*circinfo->awidth;
+				vb.y = de->y + y0 + xf*circinfo->awidth;
+				vc.x = de->x + x0 - yf*circinfo->awidth;
+				vc.y = de->y + y0 - xf*circinfo->awidth;
 				LOG_D(TAG, "%d: %d,%d\n", alpha, xa, ya);
-				if(validA==-1)
-					rdis->drawTriangle(xa,ya,xb,yb,xc,yc,circinfo->acol, false);
-				else if(validA==1)
-					rdis->drawTriangle(xa,ya,xb,yb,xc,yc,circinfo->acol, true);
+				if(validA==-1){
+					triangle(bm, va, vb, vc, circinfo->acol, false);
+					LOG_I(TAG, "GPS pos false");
+					//rdis->drawTriangle(xa,ya,xb,yb,xc,yc,circinfo->acol, false);
+				}
+				else if(validA==1){
+					LOG_I(TAG, "GPS pos true");
+					triangle(bm, va, vb, vc, circinfo->acol, true);
+					//rdis->drawTriangle(xa,ya,xb,yb,xc,yc,circinfo->acol, true);
+				}
+				rdis->drawBitmap(de->x, de->y, bitmap, size, size);
 				free(bitmap);
 				}
 				break;
